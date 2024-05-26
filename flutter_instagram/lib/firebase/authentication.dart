@@ -1,61 +1,95 @@
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_instagram/models/user.dart' as model;
 import 'package:flutter_instagram/firebase/storage.dart';
 
 class Authentication {
-    final FirebaseAuth _auth = FirebaseAuth.instance;
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-   Future<String> Signup ({
-      required String email,
-      required String password,
-      required String username,
-      required String description,
-      required Uint8List file,
-    }) async{
-        String promp = "error";
-        try {
-          if(email.isNotEmpty || password.isNotEmpty || username.isNotEmpty || description.isNotEmpty){
-           UserCredential credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-           print(credential.user!.uid);
+  Future<model.User> getUserDetails() async {
+    User currentUser = _auth.currentUser!;
 
-           String storePhoto = await Storage().uploadImageToStorage('profilePics', file, false);
+    DocumentSnapshot documentSnapshot =
+        await _firestore.collection('users').doc(currentUser.uid).get();
 
-           await _firestore.collection('users').doc(credential.user!.uid).set({
-            'username' : username,
-            'uid' : credential.user!.uid,
-            'email' : email,
-            'description' : description,
-            'followers' : [],
-            'following' : [],
-            'photoURL' : storePhoto,
-           });
-          
-           promp = "success";
-          }
-        } catch(error) {
-          promp = error.toString();
-        }
-        return promp;
-    }
+    return model.User.fromSnap(documentSnapshot);
+  }
 
-    Future<String> login({
-      required String email,
-      required String password
-    }) async {
-      String promp = 'Some error occured';
 
-      try{
-        if(email.isNotEmpty || password.isNotEmpty){
-          await _auth.signInWithEmailAndPassword(email: email, password: password);
-          promp = 'success';
-        }else {
-          promp = 'Please Enter All Information';
-        }
-      } catch(error){
-        promp = error.toString();
+  Future<String> signup({
+    required String email,
+    required String password,
+    required String username,
+    required String bio,
+    required Uint8List file,
+  }) async {
+    String res = "Some error Occurred";
+    try {
+      if (email.isNotEmpty ||
+          password.isNotEmpty ||
+          username.isNotEmpty ||
+          bio.isNotEmpty ||
+          file != null) {
+        UserCredential cred = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        String photoUrl =
+            await Storage().uploadImageToStorage('profilePics', file, false);
+
+        model.User user = model.User(
+          username: username,
+          uid: cred.user!.uid,
+          photoUrl: photoUrl,
+          email: email,
+          bio: bio,
+          followers: [],
+          following: [],
+        );
+
+     
+        await _firestore
+            .collection("users")
+            .doc(cred.user!.uid) 
+            .set(user.toJson());
+
+        res = "success";
+      } else {
+        res = "Please enter all the fields";
       }
-      return promp;
+    } catch (err) {
+      return err.toString();
     }
+    return res;
+  }
+
+
+  Future<String> login({
+    required String email,
+    required String password,
+  }) async {
+    String res = "Some error Occurred";
+    try {
+      if (email.isNotEmpty || password.isNotEmpty) {
+ 
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        res = "success";
+      } else {
+        res = "Please enter all the fields";
+      }
+    } catch (err) {
+      return err.toString();
+    }
+    return res;
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 }

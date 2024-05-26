@@ -1,189 +1,225 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_instagram/firebase/authentication.dart';
-import 'package:flutter_instagram/screens/login.dart';
-import 'package:flutter_instagram/service/image_picker.dart';
-
-
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_instagram/firebase/authentication.dart';
+import 'package:flutter_instagram/responsive/mobile_screen_layout.dart';
+import 'package:flutter_instagram/responsive/responsive_layout.dart';
+import 'package:flutter_instagram/responsive/web_screen_layout.dart';
+import 'package:flutter_instagram/screens/login.dart';
+import 'package:flutter_instagram/service/colors.dart';
+import 'package:flutter_instagram/service/image_picker.dart';
+import 'package:flutter_instagram/widgets/text_field_input.dart';
 
 class SignupScreen extends StatefulWidget {
-  final VoidCallback show;
-  SignupScreen(this.show, {super.key});
+  const SignupScreen({Key? key}) : super(key: key);
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final email = TextEditingController();
-  final FocusNode emailFocus = FocusNode();
-  final password = TextEditingController();
-  final FocusNode passwordFocus = FocusNode();
-  final confirmpass = TextEditingController();
-  final FocusNode confirmpassFocus = FocusNode();
-  final username = TextEditingController();
-  final FocusNode usernameFocus = FocusNode();
-  final description = TextEditingController();
-  final FocusNode descriptionFocus = FocusNode();
-  Uint8List? _image;
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
   bool _isLoading = false;
+  Uint8List? _image;
 
-  void selectImage() async {
-    Uint8List image = await pickImage(ImageSource.gallery);
-    setState(() {
-      _image = image;
-    });
+  @override
+  void dispose() {
+    super.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _usernameController.dispose();
   }
 
-  void signUp() async {
+  void signUpUser() async {
+
     setState(() {
       _isLoading = true;
     });
-    String render = await Authentication().Signup(
-      email: email.text, 
-      password: password.text, 
-      username: username.text, 
-      description: description.text, 
-      file: _image!,
-      );
+
+
+    String res = await Authentication().signup(
+        email: _emailController.text,
+        password: _passwordController.text,
+        username: _usernameController.text,
+        bio: _bioController.text,
+        file: _image!);
+  
+    if (res == "success") {
       setState(() {
         _isLoading = false;
       });
-      if(render != 'success'){
-        showSnackBar(render, context);
-      }
 
+      if (context.mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const ResponsiveLayout(
+              mobileScreenLayout: MobileScreenLayout(),
+              webScreenLayout: WebScreenLayout(),
+            ),
+          ),
+        );
+      }
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+      if (context.mounted) {
+        showSnackBar(context as String, res as BuildContext);
+      }
+    }
+  }
+
+  selectImage() async {
+    Uint8List im = await pickImage(ImageSource.gallery);
+   
+    setState(() {
+      _image = im;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 50),
-            const Center(
-              child: Image(
-                image: AssetImage('images/logo-text.png'),
-                height: 150,
-                width: 300,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                flex: 2,
+                child: Container(),
               ),
-            ),
-            const SizedBox(height: 20),
-            Stack(  
-              children: [
-                _image!=null?CircleAvatar(
-                  radius: 64,
-                  backgroundImage: MemoryImage(_image!),
-                )
-                : const CircleAvatar(
-                    radius: 64,
-                    backgroundImage: NetworkImage('https://i.stack.imgur.com/l60Hf.png'),
-                ),
-                Positioned(
-                  child: IconButton(  
-                    onPressed: selectImage,
-                    icon: const Icon(
-                      Icons.add_a_photo,
-                    )
+              SvgPicture.asset(
+                'assets/ic_instagram.svg',
+                color: primaryColor,
+                height: 64,
+              ),
+              const SizedBox(
+                height: 64,
+              ),
+              Stack(
+                children: [
+                  _image != null
+                      ? CircleAvatar(
+                          radius: 64,
+                          backgroundImage: MemoryImage(_image!),
+                          backgroundColor: Colors.red,
+                        )
+                      : const CircleAvatar(
+                          radius: 64,
+                          backgroundImage: NetworkImage(
+                              'https://i.stack.imgur.com/l60Hf.png'),
+                          backgroundColor: Colors.red,
+                        ),
+                  Positioned(
+                    bottom: -10,
+                    left: 80,
+                    child: IconButton(
+                      onPressed: selectImage,
+                      icon: const Icon(Icons.add_a_photo),
+                    ),
                   )
-                )
-              ],
-            ),
-            const SizedBox(height: 25),
-            buildTextBox(email, emailFocus, "Email"),
-            const SizedBox(height: 15),
-            buildTextBox(username, usernameFocus, "Username"),
-            const SizedBox(height: 15),
-            buildTextBox(description, descriptionFocus, "Description"),
-            const SizedBox(height: 15),
-            buildTextBox(password, passwordFocus, "Password"),
-            const SizedBox(height: 15),
-            buildTextBox(confirmpass, confirmpassFocus, "Confirm Password"),
-            const SizedBox(height: 15),
-            InkWell(
-              onTap: signUp,
-              child: Container( 
-                child:_isLoading ? const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                  ),) 
-                  : const Text('Sign up'),
-                width: 370,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: const ShapeDecoration(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15),),
-                  ),
-                  color: Colors.blue,
-                ),
-                
+                ],
               ),
-            ),
-              
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Already have an account?"),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const LoginScreen()),
-                    );
-                  },
-                  child: const Text(
-                    "Click Here!",
-                    style: TextStyle(
-                      color: Colors.blue,
+              const SizedBox(
+                height: 24,
+              ),
+              TextFieldInput(
+                hintText: 'Enter your username',
+                textInputType: TextInputType.text,
+                textEditingController: _usernameController,
+              ),
+              const SizedBox(
+                height: 24,
+              ),
+              TextFieldInput(
+                hintText: 'Enter your email',
+                textInputType: TextInputType.emailAddress,
+                textEditingController: _emailController,
+              ),
+              const SizedBox(
+                height: 24,
+              ),
+              TextFieldInput(
+                hintText: 'Enter your password',
+                textInputType: TextInputType.text,
+                textEditingController: _passwordController,
+                isPass: true,
+              ),
+              const SizedBox(
+                height: 24,
+              ),
+              TextFieldInput(
+                hintText: 'Enter your bio',
+                textInputType: TextInputType.text,
+                textEditingController: _bioController,
+              ),
+              const SizedBox(
+                height: 24,
+              ),
+              InkWell(
+                onTap: signUpUser,
+                child: Container(
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: const ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                    color: blueColor,
+                  ),
+                  child: !_isLoading
+                      ? const Text(
+                          'Sign up',
+                        )
+                      : const CircularProgressIndicator(
+                          color: primaryColor,
+                        ),
+                ),
+              ),
+              const SizedBox(
+                height: 12,
+              ),
+              Flexible(
+                flex: 2,
+                child: Container(),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: const Text(
+                      'Already have an account?',
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Padding buildTextBox(TextEditingController controller, FocusNode focus, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Container(
-        height: 70,
-        width: 370,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: TextField(
-          style: const TextStyle(fontSize: 16, color: Colors.black),
-          controller: controller,
-          focusNode: focus,
-          decoration: InputDecoration(
-            hintText: text,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 25),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                width: 2,
-                color: Colors.grey,
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: const Text(
+                        ' Login.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                width: 2,
-                color: Colors.black,
-              ),
-            ),
+            ],
           ),
         ),
       ),

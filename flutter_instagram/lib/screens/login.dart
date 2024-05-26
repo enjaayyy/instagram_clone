@@ -1,154 +1,167 @@
-import 'package:flutter_instagram/screens/signup.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_instagram/firebase/authentication.dart';
+import 'package:flutter_instagram/responsive/mobile_screen_layout.dart';
+import 'package:flutter_instagram/responsive/responsive_layout.dart';
+import 'package:flutter_instagram/responsive/web_screen_layout.dart';
+import 'package:flutter_instagram/screens/signup.dart';
+import 'package:flutter_instagram/service/colors.dart';
+import 'package:flutter_instagram/service/global_variable.dart';
 import 'package:flutter_instagram/service/image_picker.dart';
-import 'package:flutter_instagram/screens/home_screen.dart';
+import 'package:flutter_instagram/widgets/text_field_input.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key:key);
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
-  
+
 class _LoginScreenState extends State<LoginScreen> {
-  final email = TextEditingController();
-  FocusNode email_foc = FocusNode();
-  final password = TextEditingController();
-  FocusNode password_foc = FocusNode();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void dispose() {
+    super.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+  }
 
   void loginUser() async {
     setState(() {
       _isLoading = true;
     });
     String res = await Authentication().login(
-      email: email.text, 
-      password: password.text);
-      if(res == "success"){
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const HomeScreen())
-            );
-      }else {
-        showSnackBar(res, context);
+        email: _emailController.text, password: _passwordController.text);
+    if (res == 'success') {
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ResponsiveLayout(
+                mobileScreenLayout: MobileScreenLayout(),
+                webScreenLayout: WebScreenLayout(),
+              ),
+            ),
+            (route) => false);
+
+        setState(() {
+          _isLoading = false;
+        });
       }
+    } else {
       setState(() {
         _isLoading = false;
       });
+      if (context.mounted) {
+        showSnackBar(context as String, res as BuildContext);
+      }
+    }
   }
-  @override 
-  Widget build(BuildContext context){
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFEEF6FF),
-      body: SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 150),
-          const Center(
-            child: Image(
-              image: AssetImage('images/instagram_logo.png'),
-              height: 100,
-              width: 100,
-            ),
-          ),
-          const SizedBox(height: 50),
-          Textbox(email, email_foc, 'Username, email or mobile number'),
-          const SizedBox(height: 25),
-          Textbox(password, password_foc, 'Password'),
-          const SizedBox(height: 25),
-          InkWell(  
-      onTap: loginUser,
-      child: Container(  
-          child: _isLoading ?
-            const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: Container(
+          padding: MediaQuery.of(context).size.width > webScreenSize
+              ? EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width / 3)
+              : const EdgeInsets.symmetric(horizontal: 32),
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                flex: 2,
+                child: Container(),
               ),
-            )
-            : const Text(
-              'Log in',
-              style: TextStyle(color: Colors.white),
-            ),
-            width: 390,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: const ShapeDecoration(
-              shape: RoundedRectangleBorder(  
-                borderRadius: BorderRadius.all(
-                  Radius.circular(15),
+              SvgPicture.asset(
+                'assets/ic_instagram.svg',
+                color: primaryColor,
+                height: 64,
+              ),
+              const SizedBox(
+                height: 64,
+              ),
+              TextFieldInput(
+                hintText: 'Enter your email',
+                textInputType: TextInputType.emailAddress,
+                textEditingController: _emailController,
+              ),
+              const SizedBox(
+                height: 24,
+              ),
+              TextFieldInput(
+                hintText: 'Enter your password',
+                textInputType: TextInputType.text,
+                textEditingController: _passwordController,
+                isPass: true,
+              ),
+              const SizedBox(
+                height: 24,
+              ),
+              InkWell(
+                onTap: loginUser,
+                child: Container(
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: const ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                    color: blueColor,
+                  ),
+                  child: !_isLoading
+                      ? const Text(
+                          'Log in',
+                        )
+                      : const CircularProgressIndicator(
+                          color: primaryColor,
+                        ),
                 ),
               ),
-              color: Colors.blue,
-            ),
-        ),
-      ),
-          const SizedBox(height: 230),
-          ElevatedButton(
-            onPressed: (){
-              Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (context) => SignupScreen(() { })),
-              );
-            },
-            style: ButtonStyle(
-              minimumSize: MaterialStateProperty.all<Size>(Size(390,60)),
-              backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
-               shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-               RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30), 
-                side: BorderSide(color: Color(0xFF0062DD)),
-            ),
-    ),
-            ),
-            child: const Text(
-              "Create New Account",
-              style: TextStyle(  
-              fontSize: 15,
-              color: Color(0xFF0062DD),
-            ),
+              const SizedBox(
+                height: 12,
               ),
-          )
-        ],
-        )
+              Flexible(
+                flex: 2,
+                child: Container(),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: const Text(
+                      'Dont have an account?',
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SignupScreen(),
+                      ),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: const Text(
+                        ' Signup.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-} 
-
-Padding Textbox(TextEditingController x, FocusNode focus, String text) {
-  return Padding(
-    padding: EdgeInsets.symmetric(horizontal: 10),
-    child: Container(  
-      height: 70,
-      decoration: BoxDecoration(  
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: TextField(  
-        style: TextStyle(fontSize: 16, color: Colors.black),
-        controller: x,
-        focusNode: focus,
-        decoration: InputDecoration(  
-          hintText: text,
-          contentPadding:
-                EdgeInsets.symmetric(horizontal: 15, vertical: 25),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                width: 2,
-                color: Colors.grey, 
-              ),
-        ),
-          focusedBorder: OutlineInputBorder(  
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(  
-              width: 2,
-              color: Colors.black,
-            )
-          )
-        ),
-      ),
-    ),
-  );
 }
-
